@@ -1,4 +1,4 @@
-name: Windows-RDP-Cloudflare
+name: Windows-RDP-Bore
 
 on: [workflow_dispatch]
 
@@ -11,10 +11,11 @@ jobs:
         run: |
           Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
           
-      # 2. Tải Cloudflare Tunnel (Thay thế Ngrok)
-      - name: Download Cloudflared
+      # 2. Tải Bore (Công cụ tạo Tunnel đơn giản giống Ngrok)
+      - name: Download Bore
         run: |
-          Invoke-WebRequest -Uri https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile cloudflared.exe
+          Invoke-WebRequest https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-pc-windows-msvc.zip -OutFile bore.zip
+          Expand-Archive bore.zip
 
       # 3. Kích hoạt Remote Desktop trên Windows Runner
       - name: Enable RDP
@@ -23,8 +24,9 @@ jobs:
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
 
-      # 4. Tạo đường hầm (Tunnel) và giữ kết nối
+      # 4. Tạo đường hầm TCP trực tiếp
       - name: Start Tunnel
         run: |
-          Write-Host "Dang khoi tao Tunnel... Hay kiem tra log de lay dia chi ket noi."
-          .\cloudflared.exe tunnel --url tcp://localhost:3389
+          Write-Host "Dang ket noi Bore..."
+          # Chạy bore port 3389 ra server công khai bore.pub
+          .\bore\bore.exe local 3389 --to bore.pub
