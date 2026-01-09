@@ -1,4 +1,4 @@
-name: Windows-RDP-Bore
+name: Windows-RDP-Forever
 
 on: [workflow_dispatch]
 
@@ -6,27 +6,39 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      # 1. Cấu hình User và Mật khẩu cho RDP
       - name: Setup User
         run: |
           Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
           
-      # 2. Tải Bore (Công cụ tạo Tunnel đơn giản giống Ngrok)
       - name: Download Bore
         run: |
           Invoke-WebRequest https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-pc-windows-msvc.zip -OutFile bore.zip
           Expand-Archive bore.zip
 
-      # 3. Kích hoạt Remote Desktop trên Windows Runner
       - name: Enable RDP
         run: |
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
 
-      # 4. Tạo đường hầm TCP trực tiếp
-      - name: Start Tunnel
+      - name: Clean GitHub Workspace
         run: |
-          Write-Host "Dang ket noi Bore..."
-          # Chạy bore port 3389 ra server công khai bore.pub
-          .\bore\bore.exe local 3389 --to bore.pub
+          Write-Host "Dang xoa sach du lieu source code GitHub..."
+          Remove-Item "D:\a" -Recurse -Force -ErrorAction SilentlyContinue
+          Write-Host "Da xoa xong!"
+
+      # --- SỬA ĐỔI QUAN TRỌNG TẠI ĐÂY ---
+      - name: Start Tunnel Loop
+        run: |
+          Write-Host "Bat dau tao Tunnel..."
+          # Vòng lặp vô hạn: Nếu bore bị tắt, nó sẽ tự bật lại sau 1 giây
+          # Điều này ngăn không cho Workflow kết thúc sớm
+          while ($true) {
+            try {
+              .\bore\bore.exe local 3389 --to bore.pub
+            } catch {
+              Write-Host "Bore gap loi, dang thu lai..."
+            }
+            Write-Host "Bore da ngat ket noi. Tu dong ket noi lai sau 1 giay..."
+            Start-Sleep -Seconds 1
+          }
